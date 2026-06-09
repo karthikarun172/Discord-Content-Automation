@@ -7,7 +7,8 @@ from google import genai
 from google.genai import types
 import time
 import random
-
+import tempfile
+import re
 
 # Google Workspace API Client modules
 from google.oauth2.credentials import Credentials
@@ -72,12 +73,13 @@ def push_workspace_to_docs(title, structural_text):
     """
     try:
         docs_service, drive_service = get_google_services()
+        print("STEP 1: Creating document")
         
         # Step 1: Create empty baseline document template file
         doc_meta = {'title': f"{title} - Production Blueprint"}
         doc = docs_service.documents().create(body=doc_meta).execute()
         doc_id = doc.get('documentId')
-        
+        print(f"Created Doc ID: {doc_id}")
         # Append standard text headers safely to document timeline body
         body_content = structural_text + "\n\n--- AUTO-GENERATED STORYBOARD BLUEPRINT ---\n\n"
         requests_payload = [{
@@ -92,19 +94,20 @@ def push_workspace_to_docs(title, structural_text):
         encoded_query = requests.utils.quote(f"A clean minimalist concept dashboard diagram illustrating {title}")
         public_img_url = f"https://image.pollinations.ai/p/{encoded_query}?width=600&height=600&nologo=true"
         
-        image_payload = [{
-            'insertInlineImage': {
-                'location': {'index': len(body_content) + 20},
-                'uri': public_img_url,
-                'objectSize': {
-                    'height': {'magnitude': 280, 'unit': 'PT'},
-                    'width': {'magnitude': 280, 'unit': 'PT'}
-                }
-            }
-        }]
-        docs_service.documents().batchUpdate(documentId=doc_id, body={'requests': image_payload}).execute()
+        # image_payload = [{
+        #     'insertInlineImage': {
+        #         'location': {'index': len(body_content) + 20},
+        #         'uri': public_img_url,
+        #         'objectSize': {
+        #             'height': {'magnitude': 280, 'unit': 'PT'},
+        #             'width': {'magnitude': 280, 'unit': 'PT'}
+        #         }
+        #     }
+        # }]
+        # docs_service.documents().batchUpdate(documentId=doc_id, body={'requests': image_payload}).execute()
         
         # Step 3: File document inside shared project folder
+        print(f"Folder ID: {GOOGLE_DRIVE_FOLDER_ID}")
         if GOOGLE_DRIVE_FOLDER_ID and GOOGLE_DRIVE_FOLDER_ID != "YOUR_FOLDER_ID":
             file_meta = drive_service.files().get(fileId=doc_id, fields='parents').execute()
             previous_parents = ",".join(file_meta.get('parents', []))
@@ -114,6 +117,7 @@ def push_workspace_to_docs(title, structural_text):
                 removeParents=previous_parents,
                 fields='id, parents'
             ).execute()
+            print("Document moved successfully")
             
         return f"https://docs.google.com/document/d/{doc_id}/edit"
     except Exception as e:
@@ -227,6 +231,9 @@ async def generate_content_with_retry(
 
             await asyncio.sleep(wait_time)
 
+async def send_long_message(ctx, text, chunk_size=1900):
+    for i in range(0, len(text), chunk_size):
+        await ctx.send(text[i:i + chunk_size])
 
 @bot.command(name="suggest")
 async def process_suggestion_flow(ctx, *, topic_prompt: str):
@@ -251,10 +258,26 @@ async def process_suggestion_flow(ctx, *, topic_prompt: str):
             config=types.GenerateContentConfig(
                 system_instruction=MASTER_SYSTEM_INSTRUCTION,
                 temperature=0.7,
+                max_output_tokens=8192,
             ),
         )
+        safe_filename = re.sub(
+            r'[^a-zA-Z0-9_-]',
+            '-',
+            topic_prompt.lower()
+        )
 
-        await ctx.send(response.text[:1500])
+        filename = f"{safe_filename}.md"
+
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(response.text)
+
+        await ctx.send(
+            "✅ Blueprint generated.",
+            file=discord.File(filename)
+        )
+
+        os.remove(filename)
 
     except Exception as e:
 
@@ -269,6 +292,36 @@ async def process_suggestion_flow(ctx, *, topic_prompt: str):
             )
 
             
+@bot.command(name="publish")
+async def publish_to_docs(ctx):
+
+    if not ctx.message.attachments:
+        await ctx.send("Please attach a text file.")
+        return
+
+    attachment = ctx.message.attachments[0]
+
+    if not attachment.filename.endswith((".txt", ".md")):
+        await ctx.send("Only .txt and .md files are supported.")
+        return
+
+    content = (await attachment.read()).decode("utf-8")
+
+    doc_link = push_workspace_to_docs(
+        attachment.filename,
+        content
+    )
+
+    if doc_link:
+        await ctx.send(
+            f"✅ Uploaded to Google Docs\n{doc_link}"
+        )
+    else:
+        await ctx.send(
+            "❌ Failed to create Google Doc"
+        )
+
+
 @bot.command(name="optimize")
 async def process_refactoring_flow(ctx, *, raw_script_block: str):
     """Workflow 2: Accepts a pasted rough script/essay and perfectly formats it into structured production rows."""
