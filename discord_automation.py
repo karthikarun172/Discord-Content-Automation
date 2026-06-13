@@ -34,37 +34,55 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-def get_google_services():
-    """
-    Natively authenticates cloud container requests via a pre-fetched 
-    Environment token configuration to bypass browser runtime locks.
-    """
-    creds = None
-    env_token = os.environ.get("GOOGLE_TOKEN_JSON")
+# def get_google_services():
+#     """
+#     Natively authenticates cloud container requests via a pre-fetched 
+#     Environment token configuration to bypass browser runtime locks.
+#     """
+#     creds = None
+#     env_token = os.environ.get("GOOGLE_TOKEN_JSON")
     
-    if env_token:
-        try:
-            token_data = json.loads(env_token)
-            creds = Credentials.from_authorized_user_info(token_data, SCOPES)
-        except Exception as json_err:
-            print(f"⚠️ Error parsing environment token JSON: {str(json_err)}")
+#     if env_token:
+#         try:
+#             token_data = json.loads(env_token)
+#             creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+#         except Exception as json_err:
+#             print(f"⚠️ Error parsing environment token JSON: {str(json_err)}")
 
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            if os.path.exists('token.json'):
-                creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-            else:
-                from google_auth_oauthlib.flow import InstalledAppFlow
-                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-                creds = flow.run_local_server(port=0)
+#     if not creds or not creds.valid:
+#         if creds and creds.expired and creds.refresh_token:
+#             creds.refresh(Request())
+#         else:
+#             if os.path.exists('token.json'):
+#                 creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+#             else:
+#                 from google_auth_oauthlib.flow import InstalledAppFlow
+#                 flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+#                 creds = flow.run_local_server(port=0)
         
-        # Save a local cache of the authenticated session state
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
+#         # Save a local cache of the authenticated session state
+#         with open('token.json', 'w') as token:
+#             token.write(creds.to_json())
             
-    return build('docs', 'v1', credentials=creds), build('drive', 'v3', credentials=creds)
+#     return build('docs', 'v1', credentials=creds), build('drive', 'v3', credentials=creds)
+
+def get_google_services():
+
+    creds = Credentials.from_authorized_user_file(
+        "token.json",
+        SCOPES
+    )
+
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+
+        with open("token.json", "w") as token:
+            token.write(creds.to_json())
+
+    return (
+        build("docs", "v1", credentials=creds),
+        build("drive", "v3", credentials=creds)
+    )
 
 def push_workspace_to_docs(title, structural_text):
     """
