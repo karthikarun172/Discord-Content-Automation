@@ -1,13 +1,10 @@
 import os
-import json
 import discord
 from discord.ext import commands
 import requests
 from google import genai
 from google.genai import types
-import time
 import random
-import tempfile
 import re
 
 # Google Workspace API Client modules
@@ -26,45 +23,12 @@ DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY")
 GOOGLE_DRIVE_FOLDER_ID = os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "YOUR_FOLDER_ID")
 
-# Operational permissions required for text and metadata file ingestion
 SCOPES = ['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive']
 
 # Set up Discord bot intents
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
-
-# def get_google_services():
-#     """
-#     Natively authenticates cloud container requests via a pre-fetched 
-#     Environment token configuration to bypass browser runtime locks.
-#     """
-#     creds = None
-#     env_token = os.environ.get("GOOGLE_TOKEN_JSON")
-    
-#     if env_token:
-#         try:
-#             token_data = json.loads(env_token)
-#             creds = Credentials.from_authorized_user_info(token_data, SCOPES)
-#         except Exception as json_err:
-#             print(f"⚠️ Error parsing environment token JSON: {str(json_err)}")
-
-#     if not creds or not creds.valid:
-#         if creds and creds.expired and creds.refresh_token:
-#             creds.refresh(Request())
-#         else:
-#             if os.path.exists('token.json'):
-#                 creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-#             else:
-#                 from google_auth_oauthlib.flow import InstalledAppFlow
-#                 flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-#                 creds = flow.run_local_server(port=0)
-        
-#         # Save a local cache of the authenticated session state
-#         with open('token.json', 'w') as token:
-#             token.write(creds.to_json())
-            
-#     return build('docs', 'v1', credentials=creds), build('drive', 'v3', credentials=creds)
 
 def get_google_services():
 
@@ -112,17 +76,6 @@ def push_workspace_to_docs(title, structural_text):
         encoded_query = requests.utils.quote(f"A clean minimalist concept dashboard diagram illustrating {title}")
         public_img_url = f"https://image.pollinations.ai/p/{encoded_query}?width=600&height=600&nologo=true"
         
-        # image_payload = [{
-        #     'insertInlineImage': {
-        #         'location': {'index': len(body_content) + 20},
-        #         'uri': public_img_url,
-        #         'objectSize': {
-        #             'height': {'magnitude': 280, 'unit': 'PT'},
-        #             'width': {'magnitude': 280, 'unit': 'PT'}
-        #         }
-        #     }
-        # }]
-        # docs_service.documents().batchUpdate(documentId=doc_id, body={'requests': image_payload}).execute()
         
         # Step 3: File document inside shared project folder
         print(f"Folder ID: {GOOGLE_DRIVE_FOLDER_ID}")
@@ -167,29 +120,6 @@ async def on_ready():
         print(f"- {guild.name} ({guild.id})")
     print(f"🚀 DecisionForge Cloud Orchestrator active. Connected as: {bot.user.name}")
 
-# @bot.command(name="suggest")
-# async def process_suggestion_flow(ctx, *, topic_prompt: str):
-#     """Workflow 1: Generates video blueprints completely from scratch using a raw topic concept."""
-#     await ctx.send(f"🧠 *DecisionForge Engine received idea stream. Compiling complete workspace for: '{topic_prompt}'...*")
-    
-    
-#     try:
-#         response = client.models.generate_content(
-#             model='gemini-2.5-flash',
-#             contents=user_prompt,
-#             config=types.GenerateContentConfig(
-#                 system_instruction=MASTER_SYSTEM_INSTRUCTION,
-#                 temperature=0.7
-#             )
-#         )
-        
-#         doc_link = push_workspace_to_docs(topic_prompt, response.text)
-#         if doc_link:
-#             await ctx.send(f"✅ **Video workspace structured successfully!** Text elements parsed and assets embedded.\n🔗 **Google Doc Portal:** {doc_link}")
-#         else:
-#             await ctx.send("⚠️ Content processed successfully, but an API limit prevented filing the Google Doc.")
-#     except Exception as error:
-#         await ctx.send(f"❌ System failure inside suggestion compiler: {str(error)}")
 import asyncio
 
 
