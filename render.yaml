@@ -1,0 +1,9 @@
+services:
+  - type: worker
+    name: decisionforge-bot
+
+    env: docker
+
+    dockerfilePath: ./Dockerfile
+
+    autoDeploy: true

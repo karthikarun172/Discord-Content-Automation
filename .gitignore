@@ -1,3 +1,11 @@
+.env
 .env_local
-credentials.json
+
 token.json
+credentials.json
+
+__pycache__/
+*.pyc
+
+generated/
+genereted/
