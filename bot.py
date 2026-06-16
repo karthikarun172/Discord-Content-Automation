@@ -13,8 +13,12 @@ from services.gemini_service import (
     generate_documentary_blueprint,
     optimize_script
 )
-
-
+from services.elevanlabs_service import(
+    generate_voice
+)
+from services.drive_service import (
+    upload_audio_to_drive
+)
 
 # Set up Discord bot intents
 intents = discord.Intents.default()
@@ -143,5 +147,116 @@ async def process_refactoring_flow(ctx, *, raw_script_block: str):
     except Exception as error:
         await ctx.send(f"❌ System failure inside refactoring engine: {str(error)}")
 
+
+@bot.command(name="audio")
+async def generate_audio(ctx):
+
+    if not ctx.message.attachments:
+        await ctx.send(
+            "Please attach a .md or .txt file."
+        )
+        return
+
+    attachment = ctx.message.attachments[0]
+
+    if not attachment.filename.endswith(
+        (".md", ".txt")
+    ):
+        await ctx.send(
+            "Only .md and .txt files are supported."
+        )
+        return
+
+    await ctx.send(
+        "🎙️ Generating ElevenLabs audio..."
+    )
+
+    try:
+
+        content = (
+            await attachment.read()
+        ).decode("utf-8")
+
+        safe_filename = (
+            attachment.filename
+            .replace(".md", "")
+            .replace(".txt", "")
+        )
+
+        audio_path = (
+            f"generated/audio/"
+            f"{safe_filename}.mp3"
+        )
+
+        await asyncio.to_thread(
+            generate_voice,
+            content,
+            audio_path
+        )
+
+        await ctx.send(
+            "✅ Audio generated.",
+            file=discord.File(audio_path)
+        )
+
+    except Exception as e:
+
+        logger.exception(e)
+
+        await ctx.send(
+            f"❌ Audio generation failed:\n{e}"
+        )
+
+@bot.command(name="audio-confirm")
+async def confirm_audio(ctx):
+
+    if not ctx.message.attachments:
+        await ctx.send(
+            "Please attach an MP3 file."
+        )
+        return
+
+    attachment = ctx.message.attachments[0]
+
+    if not attachment.filename.endswith(".mp3"):
+        await ctx.send(
+            "Only MP3 files are supported."
+        )
+        return
+
+    await ctx.send(
+        "☁️ Uploading approved audio..."
+    )
+
+    try:
+
+        local_file = (
+            f"generated/audio/"
+            f"{attachment.filename}"
+        )
+
+        with open(local_file, "wb") as f:
+            f.write(
+                await attachment.read()
+            )
+
+        drive_link = await asyncio.to_thread(
+            upload_audio_to_drive,
+            local_file
+        )
+
+        await ctx.send(
+            f"✅ Audio approved and archived\n"
+            f"{drive_link}"
+        )
+
+    except Exception as e:
+
+        logger.exception(e)
+
+        await ctx.send(
+            f"❌ Upload failed:\n{e}"
+        )
+        
 if __name__ == "__main__":
     bot.run(DISCORD_BOT_TOKEN)
