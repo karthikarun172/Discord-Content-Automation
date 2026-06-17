@@ -13,6 +13,13 @@ ELEVENLABS_API_KEY = os.getenv(
 ELEVENLABS_VOICE_ID = os.getenv(
     "ELEVENLABS_VOICE_ID"
 )
+HEYGEN_API_KEY = os.getenv(
+    "HEYGEN_API_KEY"
+)
+
+HEYGEN_AVATAR_ID = os.getenv(
+    "HEYGEN_AVATAR_ID"
+)
 SCOPES = [
     "https://www.googleapis.com/auth/documents",
     "https://www.googleapis.com/auth/drive",

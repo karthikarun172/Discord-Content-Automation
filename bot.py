@@ -258,5 +258,75 @@ async def confirm_audio(ctx):
             f"❌ Upload failed:\n{e}"
         )
         
+@bot.command(name="avatar")
+async def avatar_command(ctx):
+
+    if not ctx.message.attachments:
+        await ctx.send(
+            "Attach an mp3 file."
+        )
+        return
+
+    attachment = ctx.message.attachments[0]
+
+    if not attachment.filename.endswith(".mp3"):
+        await ctx.send(
+            "Only mp3 supported."
+        )
+        return
+
+    await ctx.send(
+        "🎬 Generating avatar video..."
+    )
+
+    try:
+
+        os.makedirs(
+            "generated/video",
+            exist_ok=True
+        )
+
+        audio_path = (
+            f"generated/audio/"
+            f"{attachment.filename}"
+        )
+
+        with open(audio_path, "wb") as f:
+            f.write(
+                await attachment.read()
+            )
+
+        video_filename = (
+            attachment.filename
+            .replace(".mp3", ".mp4")
+        )
+
+        video_path = (
+            f"generated/video/"
+            f"{video_filename}"
+        )
+
+        await asyncio.to_thread(
+            generate_avatar_video,
+            audio_path,
+            video_path
+        )
+
+        await ctx.send(
+            "✅ Avatar video ready",
+            file=discord.File(video_path)
+        )
+
+        os.remove(audio_path)
+        os.remove(video_path)
+
+    except Exception as e:
+
+        logger.exception(e)
+
+        await ctx.send(
+            f"❌ Avatar generation failed:\n{e}"
+        )
+    
 if __name__ == "__main__":
     bot.run(DISCORD_BOT_TOKEN)
