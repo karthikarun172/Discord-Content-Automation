@@ -11,13 +11,19 @@ from services.docs_services import (
 )
 from services.gemini_service import (
     generate_documentary_blueprint,
-    optimize_script
+    optimize_script,
+    generate_storyboard
 )
 from services.elevanlabs_service import(
     generate_voice
 )
 from services.drive_service import (
-    upload_audio_to_drive
+    upload_file_to_drive,
+    upload_project_assets
+)
+
+from services.assets_service import(
+    build_project_assets
 )
 
 # Set up Discord bot intents
@@ -241,7 +247,7 @@ async def confirm_audio(ctx):
             )
 
         drive_link = await asyncio.to_thread(
-            upload_audio_to_drive,
+            upload_file_to_drive,
             local_file
         )
 
@@ -327,6 +333,129 @@ async def avatar_command(ctx):
         await ctx.send(
             f"❌ Avatar generation failed:\n{e}"
         )
-    
+
+@bot.command(name="storyboard")
+async def storyboard_command(ctx):
+
+    if not ctx.message.attachments:
+        await ctx.send(
+            "Attach a script file."
+        )
+        return
+
+    attachment = ctx.message.attachments[0]
+
+    if not attachment.filename.endswith(
+        (".txt", ".md")
+    ):
+        await ctx.send(
+            "Only .txt and .md supported."
+        )
+        return
+
+    script_text = (
+        await attachment.read()
+    ).decode("utf-8")
+
+    await ctx.send(
+        "🎬 Generating storyboard..."
+    )
+
+    storyboard_json = (
+        await generate_storyboard(
+            script_text
+        )
+    )
+
+    output_file = (
+        attachment.filename
+        .replace(".md", "_storyboard.json")
+    )
+
+    with open(
+        output_file,
+        "w",
+        encoding="utf-8"
+    ) as f:
+        f.write(storyboard_json)
+
+    await ctx.send(
+        "✅ Storyboard generated",
+        file=discord.File(output_file)
+    )
+
+    os.remove(output_file)
+
+@bot.command(name="assets")
+async def assets_command(ctx):
+
+    if not ctx.message.attachments:
+        await ctx.send(
+            "Please attach storyboard.json"
+        )
+        return
+
+    attachment = ctx.message.attachments[0]
+
+    if not attachment.filename.endswith(".json"):
+        await ctx.send(
+            "Please upload a storyboard JSON file."
+        )
+        return
+
+    await ctx.send(
+        "🎬 Building project assets..."
+    )
+
+    try:
+
+        import json
+
+        content = (
+            await attachment.read()
+        ).decode("utf-8")
+
+        storyboard = json.loads(
+            content
+        )
+
+        project_name = (
+            storyboard.get(
+                "project",
+                "decisionforge_project"
+            )
+            .lower()
+            .replace(" ", "_")
+        )
+
+        result = await asyncio.to_thread(
+            build_project_assets,
+            project_name,
+            storyboard
+        )
+        
+        drive_links = await asyncio.to_thread(
+            upload_project_assets,
+            f"generated/{project_name}"
+        )
+
+        await ctx.send(
+            (
+                f"✅ Assets generated\n"
+                f"Scenes processed: "
+                f"{result['processed_scenes']}"
+            )
+        )
+
+    except Exception as e:
+
+        logger.exception(
+            "Asset generation failed"
+        )
+
+        await ctx.send(
+            f"❌ Asset generation failed:\n{e}"
+        )
+
 if __name__ == "__main__":
     bot.run(DISCORD_BOT_TOKEN)

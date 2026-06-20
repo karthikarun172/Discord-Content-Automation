@@ -9,3 +9,9 @@ with open(
     encoding="utf-8"
 ) as f:
     DOCUMENTARY_BLUEPRINT = f.read()
+
+with open(
+    PROMPT_DIR / "storyboard.txt",
+    encoding="utf-8"
+) as f:
+    STORYBOARD_PROMPT = f.read()

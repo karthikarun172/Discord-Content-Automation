@@ -20,6 +20,15 @@ HEYGEN_API_KEY = os.getenv(
 HEYGEN_AVATAR_ID = os.getenv(
     "HEYGEN_AVATAR_ID"
 )
+
+PEXELS_API_KEY = os.getenv(
+    "PEXELS_API_KEY"
+)
+
+GIPHY_API_KEY = os.getenv(
+    "GIPHY_API_KEY"
+)
+
 SCOPES = [
     "https://www.googleapis.com/auth/documents",
     "https://www.googleapis.com/auth/drive",

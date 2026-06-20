@@ -2,7 +2,10 @@ from google import genai
 from google.genai import types
 
 from config.settings import GEMINI_API_KEY
-from prompts import DOCUMENTARY_BLUEPRINT
+from prompts import (
+    DOCUMENTARY_BLUEPRINT,
+    STORYBOARD_PROMPT
+)
 from utils.retry import retry_async
 
 client = genai.Client(api_key=GEMINI_API_KEY)
@@ -56,6 +59,20 @@ async def optimize_script(
         config=types.GenerateContentConfig(
             system_instruction=DOCUMENTARY_BLUEPRINT,
             temperature=0.3,
+        ),
+    )
+
+    return response.text
+
+async def generate_storyboard(
+    script_text: str,
+):
+    response = await _generate_content(
+        model="gemini-2.5-flash",
+        contents=script_text,
+        config=types.GenerateContentConfig(
+            system_instruction=STORYBOARD_PROMPT,
+            temperature=0.2,
         ),
     )
 

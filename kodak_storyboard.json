@@ -1,0 +1,21 @@
+{
+  "project": "Kodak Story",
+  "scenes": [
+    {
+      "scene": 1,
+      "type": "avatar"
+    },
+    {
+      "scene": 2,
+      "type": "broll",
+      "image_query": "1970s Kodak laboratory",
+      "gif_query": "camera"
+    },
+    {
+      "scene": 3,
+      "type": "broll",
+      "image_query": "digital camera prototype",
+      "gif_query": "innovation"
+    }
+  ]
+}
